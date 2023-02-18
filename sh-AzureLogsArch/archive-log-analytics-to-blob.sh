@@ -1,5 +1,5 @@
 #/usr/bin/bash
-env=dev
+env=${1:-dev}
 echo "## env=${env}"
 if [[ -f config-${env}.sh ]] ; then
     source config-${env}.sh
@@ -133,21 +133,33 @@ echo "$table_names" | while read table_name ; do
     fi #err
 
     echo "## Downloaded table: $table_c/$table_l '$table_name' $table_record_count records" >> $download_path/_log.txt
+
 done
 
 
-    # Upload the file to the blob container
+echo "# Start Upload's to the blob container"
+
 for f in $download_path/*.json; do
-    echo "## Start upload to $container_name file_name=$file_name" | tee -a $download_path/_log.txt
+    echo "## Start upload to $container_name f=${f}" | tee -a $download_path/_log.txt
+    if [[ "$container_sas_token" == "" ]]; then
+        auth="--auth-mode login"
+        echo "# No container_sas_token set in config-${env}.sh using $auth"
+    else
+        auth="--sas-token $container_sas_token"
+        echo "# Using container_sas_token to auth to blob container $container_name"
+    fi
     az storage blob upload \
+            ${auth} \
             --account-name "$storage_account_name" \
             --container-name "$container_name" \
-            --name "${f}" \
+            --file "${f}" \
+            --name "${f##*/}" \
             --type block \
-            --source "${f}" \
             --type block --tier "hot"
 
-    echo "## table $f uploaded to blob container." | tee -a $download_path/_log.txt
+    t="$(ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes")"
+    echo "## ${f##*/} uploaded to blob container. ${t}" | tee -a $download_path/_log.txt
 done
 
-echo "## Done. TheEnd." | tee -a $download_path/_log.txt
+t="$(ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes")"
+echo "## Done. TheEnd. ${t}" | tee -a $download_path/_log.txt
