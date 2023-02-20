@@ -24,7 +24,7 @@ set -o nounset
 
 # Ensure temp dir exists
 mkdir -p $download_path/oldsplit
-echo "## Start $0 $(date -Iseconds)" | tee $download_path/_log.txt
+echo "## Start $0 $(date -Iseconds)" | tee $download_path/_log.txt | tee $download_path/_error_query.txt
 # cleanout old 0byte files to retry download , skip empty []
 #find $download_path/* -type f -maxdepth 0 -size -3c -delete
 find $download_path/* -type f -maxdepth 0 -name *.split -delete
@@ -96,12 +96,12 @@ echo "$table_names" | while read table_name ; do
         az monitor log-analytics query \
             --workspace "$workspace_id" \
             --analytics-query "${table_name}  |where TimeGenerated >= ago(${days_back}d) |summarize Count=count()" \
-            --output json  2> $download_path/_error_query.txt \
+            --output json  2>> $download_path/_error_query.txt \
         | jq -r ".[0].Count"
         )
     rc=$?
     if [[ $rc -ne 0 ]]; then
-        echo "# ERROR exit getting table_record_count for \"${table_name}\" "  | tee -a $download_path/_log.txt
+        echo "# ERROR exit getting table_record_count for \"${table_name}\" " |tee -a $download_path/_log.txt |tee -a $download_path/_error_query.txt
         exit 1
     fi
     if [[ $table_record_count -lt 19000000 ]]; then

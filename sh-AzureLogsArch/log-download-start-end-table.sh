@@ -74,19 +74,27 @@ if [[ ! -f "$file_name.gz" ]]; then
             block_step_inc_cnt=$(( $block_step_inc_cnt -1 ))
         fi
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
-        echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_error_query.txt
+        echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_log.txt
         file_name_split="${file_name}.split.${split_cnt}"
-        table_record_count=$( \
+        echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
+        ( set +x; table_record_count=$( \
             az monitor log-analytics query \
                 --workspace "$workspace_id" \
                 --analytics-query "$query" \
                 --output json  2>> $download_path/_error_query.txt \
             | tee -a $file_name_split | jq '. | length'
             )
+        )
         rc=$?
         if [[ $rc -ne 0 ]]; then
-            echo "Error rc=$rc az monitor query - see $download_path/_error_query.txt"
-            exit 1
+            err_redo=$(( $err_redo + 1 ))
+            echo "Error rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+            t_old=$t_start  #Reset to start
+            rm $file_name_split
+            touch "${file_name}.split.${split_cnt}.REDO-DEL"
+            echo "#     ERROR Reset t_old to t_start=$t_start ,touch empty ${file_name}.split.REDO-DEL.${split_cnt} RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+            #exit 1
+            continue
         fi
         est_cnt_left=$( echo "($t_old - $t_beginning)/$t_step/1" | bc)
         t_back_from_now_days=$( echo "($t_now - $t_old)/60/60/24" | bc)
@@ -106,6 +114,7 @@ if [[ ! -f "$file_name.gz" ]]; then
                 echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name}.split.REDO-DEL.${split_cnt}  new reduced t_step=$t_step"
                 block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
                 #exit 1
+                continue
             elif [[ $file_size -gt $(( 55 * 1000 * 1000)) ]]; then
                 echo "#   WARNING file_size of last split $file_size reduce t_step=${t_step}s by 25%"
                 t_step=$( echo "$t_step * 0.75/1 +1" | bc)
