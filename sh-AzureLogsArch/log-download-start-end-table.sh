@@ -83,6 +83,10 @@ if [[ ! -f "$file_name.gz" ]]; then
             | tee -a $file_name_split | jq '. | length'
             )
         rc=$?
+        if [[ $rc -ne 0 ]]; then
+            echo "Error rc=$rc az monitor query - see $download_path/_error_query.txt"
+            exit 1
+        fi
         est_cnt_left=$( echo "($t_old - $t_beginning)/$t_step/1" | bc)
         t_back_from_now_days=$( echo "($t_now - $t_old)/60/60/24" | bc)
         file_size=$( ls -l $file_name_split | awk '{print  $5}' )
