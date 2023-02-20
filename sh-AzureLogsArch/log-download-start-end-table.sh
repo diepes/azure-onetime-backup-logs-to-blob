@@ -65,8 +65,8 @@ if [[ ! -f "$file_name.gz" ]]; then
     while [[ $t_start -gt $t_beginning ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
-        t_old_str="$(gdate -d @$t_old +"%Y-%m-%dT%H:%M:%SZ")"
-        t_start_str="$(gdate -d @$t_start +"%Y-%m-%dT%H:%M:%SZ")"
+        t_old_str="$(date -d @$t_old +"%Y-%m-%dT%H:%M:%SZ")"
+        t_start_str="$(date -d @$t_start +"%Y-%m-%dT%H:%M:%SZ")"
         t_str="todatetime('$t_old_str') .. todatetime('$t_start_str')"
         t_str_display="'$t_old_str'..'$t_start_str'"
         if [[ $block_step_inc_cnt -gt 0 ]]; then
