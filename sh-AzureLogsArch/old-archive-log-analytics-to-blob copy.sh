@@ -60,13 +60,13 @@ table_names=$( \
         --resource-group $storage_rg \
         --workspace-name $workspace_name \
         --output json \
-    | jq -r ".[] | .name" \
+    | jq -r "sort_by(.name) | .[] | .name" \
     | tee $download_path/_info-table_names_and_details.txt
     )
 
 table_l=$( echo "$table_names" | wc -l |  tr -d ' ')
 if [[ $table_l -lt 10 ]]; then
-    echo "#Error only found $table_l tables ?"
+    echo "#Error exit only found $table_l tables ?"
     exit 1
 fi
 echo "## Found $table_l tables" | tee -a $download_path/_log.txt
@@ -81,8 +81,8 @@ echo "$table_names" | while read table_name ; do
     ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes" | tee -a $download_path/_log.txt
     echo "#   Downloading data for table: $table_c/$table_l \"$table_name\"" | tee -a $download_path/_log.txt
     # Get the data for the table
-    # Skip broken or useless(big) tables
-    if [[ "OmsCustomerProfileFact ReservedCommonFields Perf" == *"${table_name}"* ]]; then
+    # Skip broken or useless(big) tables - Perf, AzureDiagnostics
+    if [[ "OmsCustomerProfileFact ReservedCommonFields Perf AzureDiagnostics" == *"${table_name}"* ]]; then
         echo "#   Skip faulty table $table_name ..." | tee -a $download_path/_log.txt
         touch $file_name.SKIP_DOWNLOAD.json
         continue
@@ -101,7 +101,7 @@ echo "$table_names" | while read table_name ; do
         )
     rc=$?
     if [[ $rc -ne 0 ]]; then
-        echo "# ERROR getting table_record_count for \"${table_name}\" "
+        echo "# ERROR exit getting table_record_count for \"${table_name}\" "
         exit 1
     fi
     if [[ $table_record_count -lt 40000 ]]; then
@@ -189,7 +189,7 @@ echo "$table_names" | while read table_name ; do
                         t_step=$( echo "$t_step * 0.75/1 +1" | bc)
                         block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
                     else
-                        echo "#   WARNING Ok table_record_count=$table_record_count > 40k but file_size=$file_size < 50MB, reduce t_step=${t_step}s by 10%"
+                        echo "#   slowdown table_record_count=$table_record_count > 45k but file_size=$file_size < 50MB, reduce t_step=${t_step}s by 10%"
                         t_step=$( echo "$t_step * 0.9/1 +1" | bc)
                     fi
                 # check if we shold increase t_step size
@@ -197,7 +197,7 @@ echo "$table_names" | while read table_name ; do
                     if [[ $table_record_count -gt $table_record_count_previous ]] ; then
                         echo "#    Skip speedup inc rec cnt > previous rec count, increasing. block_step_inc_cnt=$block_step_inc_cnt"
                         if [[ $( echo "( $table_record_count - $table_record_count_previous ) /1000/1" | bc) -gt 5 ]]; then
-                            echo "#       records increase so fast >5k lets slow down 5%"
+                            echo "#       slowdown records increase so fast >5k lets slow down 5%"
                             t_step=$( echo "$t_step * 0.95/1 +1" | bc)
                         fi
                     elif [[ $block_step_inc_cnt -eq 0 ]]; then

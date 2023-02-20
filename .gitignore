@@ -130,3 +130,7 @@ dmypy.json
 
 #Private configs
 config-*
+.vscode
+
+#snyk
+.dccache
