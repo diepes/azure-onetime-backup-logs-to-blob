@@ -62,6 +62,7 @@ if [[ ! -f "$file_name.gz" ]]; then
     table_record_count=0  # num of records retrieved from query
     block_step_inc_cnt=0  # when reducing step block inc for this many rounds.
     # Working from old to new
+    set -x
     while [[ $t_start -gt $t_beginning ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
@@ -73,13 +74,13 @@ if [[ ! -f "$file_name.gz" ]]; then
             block_step_inc_cnt=$(( $block_step_inc_cnt -1 ))
         fi
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
-        #echo "#    debug --analytics-query \"$query\"  diff=$(( $t_start - $t_old ))"
+        echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_error_query.txt
         file_name_split="${file_name}.split.${split_cnt}"
         table_record_count=$( \
             az monitor log-analytics query \
                 --workspace "$workspace_id" \
                 --analytics-query "$query" \
-                --output json  2> $download_path/_error_query.txt \
+                --output json  2>> $download_path/_error_query.txt \
             | tee -a $file_name_split | jq '. | length'
             )
         rc=$?
@@ -128,7 +129,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             fi
         fi
         if [[ $table_record_count -eq 0 ]]; then
-            echo "#    no records for $table_name cnt=$table_record_count remove split file"
+            echo "#    no records for $table_name cnt=$table_record_count remove split file $file_name_split"
             rm $file_name_split
         fi
 
