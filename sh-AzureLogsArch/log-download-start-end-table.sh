@@ -169,7 +169,8 @@ f="$file_name.gz"
             --file "${f}" \
             --name "${f##*/}" \
             --type block \
-            --type block --tier "hot"
+            --type block --tier "hot" \
+            --metadata "records_count=$table_record_count"
     rc=$?
     if [[ $rc -ne 0 ]]; then
         echo "## Error with blob upload - exit"
