@@ -1,4 +1,4 @@
-#/usr/bin/bash
+#!/usr/bin/bash
 env=${1:-dev}
 echo "## env=${env}"
 if [[ -f config-${env}.sh ]] ; then
