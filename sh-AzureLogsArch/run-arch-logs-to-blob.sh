@@ -82,7 +82,7 @@ echo "$table_names" | while read table_name ; do
     echo "# START for table: $table_c/$table_l \"$table_name\"" | tee -a $download_path/_log.txt
     # Get the data for the table
     # Skip broken or useless(big) tables - Perf, AzureDiagnostics
-    if [[ "OmsCustomerProfileFact ReservedCommonFields Perf AzureDiagnostics VMConnection" == *"${table_name}"* ]]; then
+    if [[ "OmsCustomerProfileFact ReservedCommonFields Perf AzureDiagnostics" == *"${table_name}"* ]]; then
         echo "#   Skip faulty table $table_name ..." | tee -a $download_path/_log.txt
         touch $file_name.SKIP_DOWNLOAD.json
         continue
@@ -116,17 +116,18 @@ echo "$table_names" | while read table_name ; do
     fi
 
     echo "#    table \"$table_name\" record_count=$table_record_count split_per_day=$split_per_day"
-    t_now=$(date +%s)
+    t_now=$(date -d "$(date +%Y-%m-%d) 00:00:00" +%s)  # Start of today
     t_beginning=$(( t_now - ($days_back * 86400) ))
     t_start_input=$t_now
     if [[ "$split_per_day" == "false" ]]; then
-        ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name" "$workspace_id" "$table_record_count"
+            ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name" "$workspace_id" "$table_record_count"
     else
         echo "Split $table_name into days"
-        for day_back in $(seq -w $days_back 1);
+        for day_back in $(seq -w $days_back -1 1);
         do
             t_beginning=$(( t_now - (($day_back) * 86400) ))
             t_start_input=$(( t_now - (($day_back-1) * 86400) ))
+            echo "    $table_name day=$day_back/$days_back"
             ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name.d${day_back}" "$workspace_id" "$table_record_count"
         done
     fi
