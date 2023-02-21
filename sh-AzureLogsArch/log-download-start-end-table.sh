@@ -35,8 +35,10 @@ function ElapsedMinutes() {
 err_redo=0  #Count # of failed queries
 
 if [[ -f "$file_name.uploadDone" ]]; then
-    echo "ERROR found \"$file_name.uploadDone\""
-    exit 1
+    # We could get here for large tables, split per day.
+    echo "SKIP found \"$file_name.uploadDone\"" | tee -a $download_path/_log.txt
+    echo
+    exit 0
 fi
 
 if [[ $table_record_count_expected -eq 0 ]]; then
@@ -76,7 +78,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_log.txt
         file_name_split="${file_name}.split.${split_cnt}"
-        echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
+        ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
         set +e
         table_record_count=$( \
             az monitor log-analytics query \
@@ -159,8 +161,8 @@ if [[ ! -f "$file_name.gz" ]]; then
     rm $file_name.split.*
     echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
     if [[ $table_record_count_downloaded -ne $table_record_count_expected ]]; then
-        echo "   Error wrong table_record_count_downloaded=$table_record_count_downloaded table_record_count_expected=$table_record_count_expected" | tee -a $download_path/_log.txt
-        exit 1
+        echo "   Error $file_name wrong table_record_count_downloaded=$table_record_count_downloaded table_record_count_expected=$table_record_count_expected" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+        # exit 1 . #For big tables split per day we dont have accurate count.
     fi
 else
 
