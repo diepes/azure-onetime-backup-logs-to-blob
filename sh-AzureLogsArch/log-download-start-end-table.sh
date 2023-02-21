@@ -91,7 +91,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             err_redo=$(( $err_redo + 1 ))
             echo "ERROR rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             t_old=$t_start  #Reset to start
-            table_record_count=0
+            table_record_count=0  # Set to 0 discard file.
             touch "${file_name_split}.REDO-DEL.${err_redo}.err"
             t_step=$( echo "$t_step * 0.01/1 +1" | bc)  #Reduce to 1% e.g. 5000s to 100sec
             block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
@@ -113,6 +113,7 @@ if [[ ! -f "$file_name.gz" ]]; then
                     t_step=$( echo "$t_step * (10 * 1000 * 1000)/$file_size /1 +1" | bc)
                     t_old=$t_start  #Reset to start
                     err_redo=$(( $err_redo + 1 ))
+                    table_record_count=0  # Set to 0 discard file.
                     touch "${file_name_split}.REDO-DEL.${err_redo}.size"
                     echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo}  new reduced t_step=$t_step"
                     block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
