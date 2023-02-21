@@ -129,7 +129,7 @@ echo "$table_names" | while read table_name ; do
         do
             t_beginning=$(( t_now - (($day_back) * 86400) ))
             t_start_input=$(( t_now - (($day_back-1) * 86400) ))
-            echo "    $table_name day=$day_back/$days_back t_beginning=$t_beginning"
+            echo "    $table_name day=$day_back/$days_back t_beginning=$t_beginning t_now=$t_now"
             # ToDo get accurate record count estimate.
             set -x
             ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name.d${day_back}" "$workspace_id" "$(( $table_record_count / $days_back))"
