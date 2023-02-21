@@ -65,13 +65,13 @@ if [[ ! -f "$file_name.gz" ]]; then
     t_step=$t_step_minimum
     #t_now=$(date +%s)
     ## input var t_beginning=$(( t_now - ($days_back * 86400) ))
-    t_start=$t_start_input
+    t_start=$(( $t_start_input * 10 )) ## 10th of seconds
     t_old=$(($t_start - $t_step))
     split_cnt=0
     table_record_count=0  # num of records retrieved from query
     block_step_inc_cnt=0  # when reducing step block inc for this many rounds.
     # Working from old to new
-    while [[ $t_start -gt $t_beginning ]]; do
+    while [[ $t_start -gt $(( $t_beginning * 10 )) ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
         # 10th of seconds
