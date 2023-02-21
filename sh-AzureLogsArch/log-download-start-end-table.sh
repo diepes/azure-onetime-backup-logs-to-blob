@@ -61,8 +61,8 @@ if [[ ! -f "$file_name.gz" ]]; then
     # v2 reverste time start at now an work back to (now - days ago)
     ## Do multiple queries.
     #t_step_minimum=$(( 60 * 60 * 24 ))  # 86400s = 1 day
-    t_step_minimum=$(( 60 * 10 * 10 ))  # 10min (10th of min) 60x10 - start here and increase.
-    t_step=$t_step_minimum
+    t_step_minimum=$(( 60 * 10 ))  # 10min (10th of min) 60x10 - start here and increase.
+    t_step=$(( $t_step_minimum * 10 ))
     #t_now=$(date +%s)
     ## input var t_beginning=$(( t_now - ($days_back * 86400) ))
     t_start=$(( $t_start_input * 10 )) ## 10th of seconds
@@ -75,8 +75,11 @@ if [[ ! -f "$file_name.gz" ]]; then
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
         # 10th of seconds
-        t_old_str="$(date -d @$( echo "scale=2;$t_old/10"|bc) +"%Y-%m-%dT%H:%M:%S.%NZ")"
-        t_start_str="$(date -d @$( echo "scale=2;$t_start/10"|bc) +"%Y-%m-%dT%H:%M:%S.%NZ")"
+        t_o=$( echo "scale=2;$t_old/10"|bc)
+        t_s=$( echo "scale=2;$t_start/10"|bc)
+        echo "Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ""
+        t_old_str="$(date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ")"
+        t_start_str="$(date -d @$t_s +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_str="todatetime('$t_old_str') .. todatetime('$t_start_str')"
         t_str_display="'$t_old_str'..'$t_start_str'"
         if [[ $block_step_inc_cnt -gt 0 ]]; then
@@ -164,8 +167,8 @@ if [[ ! -f "$file_name.gz" ]]; then
         table_record_count_downloaded=$(( $table_record_count_downloaded + $table_record_count ))
         t_start=$t_old  # move back in time
         t_old=$(( $t_start - $t_step ))
-        if [[ $t_old -lt $t_beginning ]]; then
-            t_old=$t_beginning
+        if [[ $t_old -lt $(( $t_beginning * 10 )) ]]; then
+            t_old=$(( $t_beginning * 10 ))
         fi
     done # reached t_beginning
 
