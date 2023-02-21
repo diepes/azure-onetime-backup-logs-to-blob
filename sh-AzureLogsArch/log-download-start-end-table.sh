@@ -99,7 +99,8 @@ if [[ ! -f "$file_name.gz" ]]; then
         t_back_from_now_days=$( echo "($t_now - $t_old)/60/60/24" | bc)
         file_size=$( ls -l $file_name_split | awk '{print  $5}' )
         file_size_mb=$( echo "$file_size /1000/1000/1" | bc)
-        echo "#  rc=$rc table \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) step=${t_step}s($( echo "$t_step /60/60/1" | bc)h) @-${t_back_from_now_days}/${days_back}days $t_str_display" | tee -a $download_path/_log.txt
+        rec_left=$(( $table_record_count_expected - $table_record_count_downloaded ))
+        echo "#  rc=$rc table \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) step=${t_step}s($( echo "$t_step /60/60/1" | bc)h) rec($rec_left) @-${t_back_from_now_days}/${days_back}days $t_str_display" | tee -a $download_path/_log.txt
         if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 45000000 ]]; then
             if [[ $file_size -gt $(( 90 * 1000 * 1000)) ]]; then
                 echo "#    ERROR REDO as file_size=$file_size and table_record_count=$table_record_count > 40000 might be losing logs, reduce step time ! $file_name_split" | tee -a $download_path/_log.txt
@@ -154,16 +155,16 @@ if [[ ! -f "$file_name.gz" ]]; then
         exit 1
     fi
     cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
-    rm $download_path/*.json.split.*
+    rm $file_name.split.*
     echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
 else
 
     echo "## file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
-
+    table_record_count_downloaded=$(( zcat $file_name | jq '. | length' ))
 fi
 
 f="$file_name.gz"
-    echo "## Start upload to $container_name f=${f}" | tee -a $download_path/_log.txt
+    echo "## Start upload to $container_name f=${f} cnt#=$table_record_count_downloaded == $table_record_count_expected" | tee -a $download_path/_log.txt
     if [[ "$container_sas_token" == "" ]]; then
         auth="--auth-mode login"
         echo "# No container_sas_token set in config-${env}.sh using $auth"
@@ -179,7 +180,7 @@ f="$file_name.gz"
             --name "${f##*/}" \
             --type block \
             --type block --tier "hot" \
-            --metadata "records_count=$table_record_count"
+            --metadata "records_count=$table_record_count_downloaded"
     rc=$?
     if [[ $rc -ne 0 ]]; then
         echo "## Error with blob upload - exit"
