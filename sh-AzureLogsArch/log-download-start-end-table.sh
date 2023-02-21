@@ -187,7 +187,14 @@ else
     table_record_count_downloaded="$(zcat ${file_name}.gz | jq '. | length' )"
 fi
 
+##
+# Upload to blob if more than 1 record.
+##
 f="$file_name.gz"
+if [[ $table_record_count_downloaded -eq 0 ]]; then
+    echo "## Skip upload record_count=$table_record_count_downloaded ${f}" | tee -a $download_path/_log.txt
+else
+
     echo "## Start upload to $container_name f=${f} cnt#=$table_record_count_downloaded == $table_record_count_expected" | tee -a $download_path/_log.txt
     if [[ "$container_sas_token" == "" ]]; then
         auth="--auth-mode login"
@@ -212,6 +219,8 @@ f="$file_name.gz"
     fi
     t="$(ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes")"
     echo "## ${f##*/} uploaded to blob container. empty file ${t}" | tee -a $download_path/_log.txt
-    rm ${f}
-    touch $file_name.uploadDone
-#done
+fi
+rm ${f}
+touch $file_name.uploadDone
+
+#TheEnd.
