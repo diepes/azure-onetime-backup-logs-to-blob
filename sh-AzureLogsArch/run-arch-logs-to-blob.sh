@@ -27,9 +27,9 @@ mkdir -p $download_path/oldsplit
 echo "## Start $0 $(date -Iseconds)" | tee $download_path/_log.txt | tee $download_path/_error_query.txt
 # cleanout old 0byte files to retry download , skip empty []
 #find $download_path/* -type f -maxdepth 0 -size -3c -delete
-find $download_path/* -type f -maxdepth 0 -name *.split -delete
-find $download_path/* -type f -maxdepth 0 -name *.json.split.* -delete
-find $download_path/oldsplit/ -type f -maxdepth 0 -name *.json.split.* -delete
+find $download_path/* -maxdepth 0 -type f -name *.split -delete
+find $download_path/* -maxdepth 0 -type f -name *.json.split.* -delete
+find $download_path/oldsplit/  -maxdepth 0 -type f -name *.json.split.* -delete
 
 # Log in to Azure
 if az account list > /dev/null;

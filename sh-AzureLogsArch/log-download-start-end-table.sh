@@ -12,7 +12,8 @@ t_beginning="$3"  #->t_old
 t_start_input="$4"  #->t_start
 file_name="$5"
 workspace_id="$6"
-table_record_count="$7"
+table_record_count_expected="$7"
+table_record_count_downloaded=0
 
 echo "## env=${env}"
 if [[ -f config-${env}.sh ]] ; then
@@ -38,8 +39,8 @@ if [[ -f "$file_name.uploadDone" ]]; then
     exit 1
 fi
 
-if [[ $table_record_count -eq 0 ]]; then
-        echo "    record_count=$table_record_count - empty file - no need to query."  | tee -a $download_path/_log.txt
+if [[ $table_record_count_expected -eq 0 ]]; then
+        echo "    record_count=$table_record_count_expected - empty file - no need to query."  | tee -a $download_path/_log.txt
         touch "$file_name.gz"
         # now still have to check upload.
 fi
@@ -62,7 +63,6 @@ if [[ ! -f "$file_name.gz" ]]; then
     table_record_count=0  # num of records retrieved from query
     block_step_inc_cnt=0  # when reducing step block inc for this many rounds.
     # Working from old to new
-    set -x
     while [[ $t_start -gt $t_beginning ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
@@ -77,14 +77,13 @@ if [[ ! -f "$file_name.gz" ]]; then
         echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_log.txt
         file_name_split="${file_name}.split.${split_cnt}"
         echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
-        ( set +x; table_record_count=$( \
+        table_record_count=$( \
             az monitor log-analytics query \
                 --workspace "$workspace_id" \
                 --analytics-query "$query" \
                 --output json  2>> $download_path/_error_query.txt \
             | tee -a $file_name_split | jq '. | length'
             )
-        )
         rc=$?
         if [[ $rc -ne 0 ]]; then
             err_redo=$(( $err_redo + 1 ))
@@ -141,7 +140,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             echo "#    no records for $table_name cnt=$table_record_count remove split file $file_name_split"
             rm $file_name_split
         fi
-
+        table_record_count_downloaded=$(( $table_record_count_downloaded + $table_record_count ))
         t_start=$t_old  # move back in time
         t_old=$(( $t_old - $t_step ))
         if [[ $t_old -lt $t_beginning ]]; then
@@ -149,10 +148,14 @@ if [[ ! -f "$file_name.gz" ]]; then
         fi
     done # reached t_beginning
 
-    echo "#    Debug - done getting table bit by bit now merge split files into $file_name.gz" | tee -a $download_path/_log.txt
+    echo "#    DONE downloading table cnt#=$table_record_count_downloaded == $table_record_count_expected now merge split files into $file_name.gz" | tee -a $download_path/_log.txt
+    if [[ $table_record_count_downloaded -ne $table_record_count_expected ]]; then
+        echo "   Error wrong table_record_count_downloaded=$table_record_count_downloaded table_record_count_expected=$table_record_count_expected" | tee -a $download_path/_log.txt
+        exit 1
+    fi
     cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
     rm $download_path/*.json.split.*
-    echo "## Downloaded table: '$table_name' $table_record_count records" | tee -a $download_path/_log.txt
+    echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
 else
 
     echo "## file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
