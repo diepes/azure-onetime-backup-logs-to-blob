@@ -91,8 +91,8 @@ if [[ ! -f "$file_name.gz" ]]; then
             echo "Error rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             t_old=$t_start  #Reset to start
             rm $file_name_split
-            touch "${file_name}.split.${split_cnt}.REDO-DEL"
-            echo "#     ERROR Reset t_old to t_start=$t_start ,touch empty ${file_name}.split.REDO-DEL.${split_cnt} RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+            touch "${file_name_split}.REDO-DEL.${err_redo}"
+            echo "#     ERROR Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo} RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             #exit 1
             continue
         fi
@@ -109,9 +109,9 @@ if [[ ! -f "$file_name.gz" ]]; then
                 t_step=$( echo "$t_step * (10 * 1000 * 1000)/$file_size /1 +1" | bc)
                 t_old=$t_start  #Reset to start
                 rm $file_name_split
-                touch "${file_name}.split.${split_cnt}.REDO-DEL"
                 err_redo=$(( $err_redo + 1 ))
-                echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name}.split.REDO-DEL.${split_cnt}  new reduced t_step=$t_step"
+                touch "${file_name_split}.REDO-DEL.${err_redo}"
+                echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo}  new reduced t_step=$t_step"
                 block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
                 #exit 1
                 continue
@@ -142,13 +142,9 @@ if [[ ! -f "$file_name.gz" ]]; then
             rm $file_name_split
         fi
 
-        #t_old=$t_start
         t_start=$t_old  # move back in time
-        #t_start=$(( $t_start + $t_step ))
         t_old=$(( $t_old - $t_step ))
-        #if [[ $t_start -gt $t_now ]]; then
         if [[ $t_old -lt $t_beginning ]]; then
-            #t_start=$t_now
             t_old=$t_beginning
         fi
     done # reached t_beginning
