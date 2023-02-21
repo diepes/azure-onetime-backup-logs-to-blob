@@ -150,13 +150,13 @@ if [[ ! -f "$file_name.gz" ]]; then
     done # reached t_beginning
 
     echo "#    DONE downloading table cnt#=$table_record_count_downloaded == $table_record_count_expected now merge split files into $file_name.gz" | tee -a $download_path/_log.txt
+    cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
+    rm $file_name.split.*
+    echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
     if [[ $table_record_count_downloaded -ne $table_record_count_expected ]]; then
         echo "   Error wrong table_record_count_downloaded=$table_record_count_downloaded table_record_count_expected=$table_record_count_expected" | tee -a $download_path/_log.txt
         exit 1
     fi
-    cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
-    rm $file_name.split.*
-    echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
 else
 
     echo "## file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
