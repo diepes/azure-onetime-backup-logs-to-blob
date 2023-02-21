@@ -71,6 +71,7 @@ if [[ ! -f "$file_name.gz" ]]; then
     table_record_count=0  # num of records retrieved from query
     block_step_inc_cnt=0  # when reducing step block inc for this many rounds.
     # Working from old to new
+    touch "${file_name}.split.000"
     while [[ $t_start -gt $(( $t_beginning * 10 )) ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
@@ -87,7 +88,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         fi
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_log.txt
-        file_name_split="${file_name}.split.${split_cnt}"
+        file_name_split="${file_name}.split.$( printf "%03i" ${split_cnt} )"
         ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
         set +e
         table_record_count=$( \
@@ -144,7 +145,7 @@ if [[ ! -f "$file_name.gz" ]]; then
                     update_t_step -10 #Reduce 10%
                 fi
             # check if we shold increase t_step size
-            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 )) ]] && [[ $file_size -lt 45000000 ]]; then
+            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 10)) ]] && [[ $file_size -lt 45000000 ]]; then
                 if [[ $table_record_count -gt $table_record_count_previous ]] ; then
                     echo "#    Skip speedup inc rec cnt > previous rec count, increasing. block_step_inc_cnt=$block_step_inc_cnt"
                     if [[ $( echo "( $table_record_count - $table_record_count_previous ) /1000/1" | bc) -gt 5 ]]; then
