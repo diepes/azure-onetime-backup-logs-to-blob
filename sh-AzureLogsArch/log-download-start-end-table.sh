@@ -92,9 +92,9 @@ if [[ ! -f "$file_name.gz" ]]; then
             echo "ERROR rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             t_old=$t_start  #Reset to start
             table_record_count=0
-            touch "${file_name_split}.REDO-DEL.${err_redo}"
-            t_step=$( echo "$t_step * 0.5/1 +1" | bc)
-            block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
+            touch "${file_name_split}.REDO-DEL.${err_redo}.err"
+            t_step=$( echo "$t_step * 0.01/1 +1" | bc)  #Reduce to 1% e.g. 5000s to 100sec
+            block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
             echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo} reduce t_step=$t_step RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             #exit 1
             #continue
@@ -112,13 +112,12 @@ if [[ ! -f "$file_name.gz" ]]; then
                     # Reset t_step to guessed 10MB mark
                     t_step=$( echo "$t_step * (10 * 1000 * 1000)/$file_size /1 +1" | bc)
                     t_old=$t_start  #Reset to start
-                    rm $file_name_split
                     err_redo=$(( $err_redo + 1 ))
-                    touch "${file_name_split}.REDO-DEL.${err_redo}"
+                    touch "${file_name_split}.REDO-DEL.${err_redo}.size"
                     echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo}  new reduced t_step=$t_step"
                     block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
                     #exit 1
-                    continue
+                    #continue
                 elif [[ $file_size -gt $(( 55 * 1000 * 1000)) ]]; then
                     echo "#   WARNING file_size of last split $file_size reduce t_step=${t_step}s by 25%"
                     t_step=$( echo "$t_step * 0.75/1 +1" | bc)

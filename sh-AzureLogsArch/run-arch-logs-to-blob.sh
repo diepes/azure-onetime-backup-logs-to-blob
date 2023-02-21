@@ -29,7 +29,9 @@ echo "## Start $0 $(date -Iseconds)" | tee $download_path/_log.txt | tee $downlo
 #find $download_path/* -type f -maxdepth 0 -size -3c -delete
 find $download_path/* -maxdepth 0 -type f -name *.split -delete
 find $download_path/* -maxdepth 0 -type f -name *.json.split.* -delete
+find $download_path/* -maxdepth 0 -type f -name *.json.*.split.* -delete  # e.g. .json.d90.split.69
 find $download_path/oldsplit/  -maxdepth 0 -type f -name *.json.split.* -delete
+# not .json.uploadDone
 
 # Log in to Azure
 if az account list > /dev/null;
