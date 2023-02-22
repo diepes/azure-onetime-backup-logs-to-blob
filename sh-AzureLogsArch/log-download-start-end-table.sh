@@ -51,7 +51,7 @@ function update_t_step () {
         t_step_pct=${1:-10}
         t_step_temp=$t_step
         t_step=$( echo "$t_step * (100+${t_step_pct})/100/1 +1" | bc)
-        echo "INFO: adjuster t_step ${t_step_pct}%  $t_step_temp > $t_step"
+        echo "INFO: adjust t_step ${t_step_pct}%  $t_step_temp > $t_step"
 }
 if [[ ! -f "$file_name.gz" ]]; then
     echo "#   Downloading data for table: \"$table_name\"" | tee -a $download_path/_log.txt
@@ -125,7 +125,7 @@ if [[ ! -f "$file_name.gz" ]]; then
                     # Try recovery run again.
                     # Reset t_step to guessed 10MB mark
                     t_step_pct=$( echo "(1 - ((10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
-                    update_t_step $t_step_pct #Reduce to 1% e.g. 5000s to 100sec
+                    update_t_step -$t_step_pct #Reduce to 1% e.g. 5000s to 100sec
                     t_old=$t_start  #Reset to start
                     err_redo=$(( $err_redo + 1 ))
                     table_record_count=0  # Set to 0 discard file.
