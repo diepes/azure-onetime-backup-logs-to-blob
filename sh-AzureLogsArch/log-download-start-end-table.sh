@@ -121,11 +121,11 @@ if [[ ! -f "$file_name.gz" ]]; then
             echo "#  rc=$rc table \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) step=${t_step}s($( echo "$t_step /60/60/1" | bc)h) rec($rec_left) @-${t_back_from_now_days}/${days_back}days $t_str_display" | tee -a $download_path/_log.txt
             if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 45000000 ]]; then
                 if [[ $file_size -gt $(( 90 * 1000 * 1000)) ]]; then
-                    echo "#    ERROR REDO as file_size=$file_size and table_record_count=$table_record_count > 40000 might be losing logs, reduce step time ! $file_name_split" | tee -a $download_path/_log.txt
+                    t_step_pct=$( echo "-(1 - ((10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
+                    echo "#    ERROR REDO as file_size=$file_size and t_step_pct=$t_step_pct table_record_count=$table_record_count > 40000 might be losing logs, reduce step time ! $file_name_split" | tee -a $download_path/_log.txt
                     # Try recovery run again.
                     # Reset t_step to guessed 10MB mark
-                    t_step_pct=$( echo "(1 - ((10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
-                    update_t_step -$t_step_pct #Reduce to 1% e.g. 5000s to 100sec
+                    update_t_step $t_step_pct #Reduce to 1% e.g. 5000s to 100sec
                     t_old=$t_start  #Reset to start
                     err_redo=$(( $err_redo + 1 ))
                     table_record_count=0  # Set to 0 discard file.
