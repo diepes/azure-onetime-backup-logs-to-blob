@@ -76,9 +76,9 @@ if [[ ! -f "$file_name.gz" ]]; then
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
         # 10th of seconds
-        t_o=$( echo "scale=2;$t_old/100"|bc)
-        t_s=$( echo "scale=2;$t_start/100"|bc)
-        t_diff=$( echo "scale=2;$t_s - $t_o"|bc)
+        t_o=$( echo "scale=3;$t_old/100"|bc)
+        t_s=$( echo "scale=3;$t_start/100"|bc)
+        t_diff=$( echo "scale=3;$t_s - $t_o"|bc)
         t_old_str="$(date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_start_str="$(date -d @$t_s +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_str="todatetime('$t_old_str') .. todatetime('$t_start_str')"
@@ -89,8 +89,8 @@ if [[ ! -f "$file_name.gz" ]]; then
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         file_name_split="${file_name}.split.$( printf "%03i" ${split_cnt} )"
         echo
-        echo "START: $file_name_split"
-        echo "#    query=\"$query\"  t_diff=$t_diff" | tee -a $download_path/_log.txt
+        echo "START: $file_name_split    t_diff=$t_diff" | tee -a $download_path/_log.txt
+        echo "#    query=\"$query\"" | tee -a $download_path/_log.txt
         #echo "#    Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ" = $t_old_str"
         ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
         set +e
@@ -116,12 +116,12 @@ if [[ ! -f "$file_name.gz" ]]; then
             #exit 1
             #continue
         else
-            est_cnt_left=$( echo "($t_old - $t_beginning)/$t_step/1" | bc)
-            t_back_from_now_days=$( echo "($t_start_input - $t_old)/60/60/24" | bc)
+            est_cnt_left=$( echo "($t_old - $t_beginning *100)/$t_step/1" | bc)
+            #t_back_from_now_days=$( echo "($t_start_input - $t_old)/60/60/24" | bc)
             file_size=$( ls -l $file_name_split | awk '{print  $5}' )
             file_size_mb=$( echo "$file_size /1000/1000/1" | bc)
             rec_left=$(( $table_record_count_expected - $table_record_count_downloaded ))
-            echo "#    rc=$rc table \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) step=${t_step}s($( echo "$t_step /60/60/1" | bc)h) rec($rec_left) @-${t_back_from_now_days}/${days_back}days" | tee -a $download_path/_log.txt
+            echo "#    rc=$rc \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) t_step=${t_step}($( echo "scale=1;$t_step /100/60/60/1" | bc)h) rec($rec_left)" | tee -a $download_path/_log.txt
             if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 45000000 ]]; then
                 if [[ $file_size -gt $(( 90 * 1000 * 1000)) ]]; then
                     t_step_pct=$( echo "-(1 - (10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
