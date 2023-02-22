@@ -148,7 +148,7 @@ if [[ ! -f "$file_name.gz" ]]; then
                     update_t_step -10 #Reduce 10%
                 fi
             # check if we shold increase t_step size
-            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 100)) ]] && [[ $file_size -lt 45000000 ]]; then
+            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 100)) ]] && [[ $file_size -lt 11000000 ]]; then
                 if [[ $table_record_count -gt $table_record_count_previous ]] ; then
                     echo "#    Skip speedup inc rec cnt > previous rec count, increasing. block_step_inc_cnt=$block_step_inc_cnt"
                     if [[ $( echo "( $table_record_count - $table_record_count_previous ) /1000/1" | bc) -gt 5 ]]; then
@@ -158,9 +158,8 @@ if [[ ! -f "$file_name.gz" ]]; then
                     fi
                 elif [[ $block_step_inc_cnt -eq 0 ]]; then
                     t_step_old=$t_step
-                    #t_step=$( echo "$t_step * 1.1/1 +1" | bc)
                     update_t_step 10 #Increase 10%
-                    echo "#    speedup 10% t_step_old $t_step_old to $t_step as cnt=$table_record_count < 30k && step<1d"
+                    echo "#    speedup 10% t_step_old $t_step_old to $t_step as cnt=$table_record_count < 30k && step<1d file_size=$(( $file_size / 1000 / 1000 )) < 11MB"
                 fi
             fi
         fi  # $rc != 0
