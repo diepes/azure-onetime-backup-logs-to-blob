@@ -50,8 +50,12 @@ function update_t_step () {
     # call with x% to inc/dec, 10th of seconds
         t_step_pct=${1:-10}
         t_step_temp=$t_step
-        t_step=$( echo "$t_step * (100+${t_step_pct})/100/1 +1" | bc)
-        echo "#        func:update_t_step t_step ${t_step_pct}%  $t_step_temp > $t_step"
+        if [[ $block_step_inc_cnt -eq 0 ]] || [[ $t_step_pct -lt 0 ]]; then
+            t_step=$( echo "$t_step * (100+${t_step_pct})/100/1 +1" | bc)
+            echo "#        func:update_t_step t_step ${t_step_pct}%  $t_step_temp > $t_step  block_step_inc_cnt=$block_step_inc_cnt"
+        else
+            echo "#        func:update_t_step t_step ${t_step_pct}% inc BLOCKED  block_step_inc_cnt=$block_step_inc_cnt do nothing."
+        fi
 }
 if [[ ! -f "$file_name.gz" ]]; then
     echo "#   Downloading data for table: \"$table_name\"" | tee -a $download_path/_log.txt
@@ -155,11 +159,12 @@ if [[ ! -f "$file_name.gz" ]]; then
                         echo "#        slowdown records increase so fast >5k lets slow down 5%"
                         #t_step=$( echo "$t_step * 0.95/1 +1" | bc)
                         update_t_step -5 #Reduce 5%
+                        block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
                     fi
-                elif [[ $block_step_inc_cnt -eq 0 ]]; then
+                else
                     t_step_old=$t_step
-                    update_t_step 10 #Increase 10%
                     echo "#    speedup 10% t_step_old $t_step_old to $t_step as cnt=$table_record_count < 30k && step<1d file_size=$(( $file_size / 1000 / 1000 )) < 11MB"
+                    update_t_step 10 #Increase 10%
                 fi
             fi
         fi  # $rc != 0
