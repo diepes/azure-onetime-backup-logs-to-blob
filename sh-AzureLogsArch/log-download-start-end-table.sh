@@ -61,24 +61,23 @@ if [[ ! -f "$file_name.gz" ]]; then
     # v2 reverste time start at now an work back to (now - days ago)
     ## Do multiple queries.
     #t_step_minimum=$(( 60 * 60 * 24 ))  # 86400s = 1 day
-    t_step_minimum=$(( 60 * 10 ))  # 10min (10th of min) 60x10 - start here and increase.
-    t_step=$(( $t_step_minimum * 10 ))
+    t_step_minimum=$(( 60 * 1 ))  # 10min (10th of min) 60x10 - start here and increase.
+    t_step=$(( $t_step_minimum * 100 ))
     #t_now=$(date +%s)
     ## input var t_beginning=$(( t_now - ($days_back * 86400) ))
-    t_start=$(( $t_start_input * 10 )) ## 10th of seconds
+    t_start=$(( $t_start_input * 100 )) ## 10th of seconds
     t_old=$(($t_start - $t_step))
     split_cnt=0
     table_record_count=0  # num of records retrieved from query
     block_step_inc_cnt=0  # when reducing step block inc for this many rounds.
     # Working from old to new
     touch "${file_name}.split.000"
-    while [[ $t_start -gt $(( $t_beginning * 10 )) ]]; do
+    while [[ $t_start -gt $(( $t_beginning * 100 )) ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
         # 10th of seconds
-        t_o=$( echo "scale=2;$t_old/10"|bc)
-        t_s=$( echo "scale=2;$t_start/10"|bc)
-        echo "Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ""
+        t_o=$( echo "scale=2;$t_old/100"|bc)
+        t_s=$( echo "scale=2;$t_start/100"|bc)
         t_old_str="$(date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_start_str="$(date -d @$t_s +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_str="todatetime('$t_old_str') .. todatetime('$t_start_str')"
@@ -87,8 +86,9 @@ if [[ ! -f "$file_name.gz" ]]; then
             block_step_inc_cnt=$(( $block_step_inc_cnt -1 ))
         fi
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
-        echo "#    debug --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old )) t_diff_beg=$(( $t_start - $t_beginning ))" | tee -a $download_path/_log.txt
         file_name_split="${file_name}.split.$( printf "%03i" ${split_cnt} )"
+        echo "$file_name_split --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old ))" | tee -a $download_path/_log.txt
+        echo "#    Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ" = $t_old_str"
         ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
         set +e
         table_record_count=$( \
@@ -102,14 +102,14 @@ if [[ ! -f "$file_name.gz" ]]; then
         set -e
         if [[ $rc -ne 0 ]]; then
             err_redo=$(( $err_redo + 1 ))
-            echo "ERROR rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+            echo "#    ERROR rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             t_old=$t_start  #Reset to start
             table_record_count=0  # Set to 0 discard file.
             touch "${file_name_split}.REDO-DEL.${err_redo}.err"
             ##t_step=$( echo "$t_step * 0.01/1 +1" | bc)  #Reduce to 1% e.g. 5000s to 100sec
             update_t_step -99 #Reduce to 1% e.g. 5000s to 100sec
             block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
-            echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo} reduce t_step=$t_step RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+            echo "#        Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo} reduce t_step=$t_step RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             #exit 1
             #continue
         else
@@ -118,7 +118,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             file_size=$( ls -l $file_name_split | awk '{print  $5}' )
             file_size_mb=$( echo "$file_size /1000/1000/1" | bc)
             rec_left=$(( $table_record_count_expected - $table_record_count_downloaded ))
-            echo "#  rc=$rc table \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) step=${t_step}s($( echo "$t_step /60/60/1" | bc)h) rec($rec_left) @-${t_back_from_now_days}/${days_back}days $t_str_display" | tee -a $download_path/_log.txt
+            echo "#    rc=$rc table \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) step=${t_step}s($( echo "$t_step /60/60/1" | bc)h) rec($rec_left) @-${t_back_from_now_days}/${days_back}days" | tee -a $download_path/_log.txt
             if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 45000000 ]]; then
                 if [[ $file_size -gt $(( 90 * 1000 * 1000)) ]]; then
                     t_step_pct=$( echo "-(1 - (10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
@@ -130,26 +130,26 @@ if [[ ! -f "$file_name.gz" ]]; then
                     err_redo=$(( $err_redo + 1 ))
                     table_record_count=0  # Set to 0 discard file.
                     touch "${file_name_split}.REDO-DEL.${err_redo}.size"
-                    echo "#     Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo}  new reduced $t_step_pct% t_step=$t_step"
+                    echo "#        Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo}  new reduced $t_step_pct% t_step=$t_step"
                     block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
                     #exit 1
                     #continue
                 elif [[ $file_size -gt $(( 55 * 1000 * 1000)) ]]; then
-                    echo "#   WARNING file_size of last split $file_size reduce t_step=${t_step}s by 25%"
+                    echo "#    WARNING file_size of last split $file_size reduce t_step=${t_step}s by 25%"
                     #t_step=$( echo "$t_step * 0.75/1 +1" | bc)
                     update_t_step -25 #Reduce 25%
                     block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
                 else
-                    echo "#   slowdown table_record_count=$table_record_count > 45k but file_size=$file_size < 50MB, reduce t_step=${t_step}s by 10%"
+                    echo "#    slowdown table_record_count=$table_record_count > 45k but file_size=$file_size < 50MB, reduce t_step=${t_step}s by 10%"
                     #t_step=$( echo "$t_step * 0.9/1 +1" | bc)
                     update_t_step -10 #Reduce 10%
                 fi
             # check if we shold increase t_step size
-            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 10)) ]] && [[ $file_size -lt 45000000 ]]; then
+            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 100)) ]] && [[ $file_size -lt 45000000 ]]; then
                 if [[ $table_record_count -gt $table_record_count_previous ]] ; then
                     echo "#    Skip speedup inc rec cnt > previous rec count, increasing. block_step_inc_cnt=$block_step_inc_cnt"
                     if [[ $( echo "( $table_record_count - $table_record_count_previous ) /1000/1" | bc) -gt 5 ]]; then
-                        echo "#       slowdown records increase so fast >5k lets slow down 5%"
+                        echo "#        slowdown records increase so fast >5k lets slow down 5%"
                         #t_step=$( echo "$t_step * 0.95/1 +1" | bc)
                         update_t_step -5 #Reduce 5%
                     fi
@@ -162,28 +162,28 @@ if [[ ! -f "$file_name.gz" ]]; then
             fi
         fi  # $rc != 0
         if [[ $table_record_count -eq 0 ]]; then
-            echo "#    no records for $table_name cnt=$table_record_count remove split file $file_name_split"
+            echo "#    no records for $table_name cnt=$table_record_count remove split file $file_name_split t_step=$tstep"
             rm $file_name_split
         fi
         table_record_count_downloaded=$(( $table_record_count_downloaded + $table_record_count ))
         t_start=$t_old  # move back in time
         t_old=$(( $t_start - $t_step ))
-        if [[ $t_old -lt $(( $t_beginning * 10 )) ]]; then
-            t_old=$(( $t_beginning * 10 ))
+        if [[ $t_old -lt $(( $t_beginning * 100 )) ]]; then
+            t_old=$(( $t_beginning * 100 ))
         fi
     done # reached t_beginning
 
-    echo "#    DONE downloading table cnt#=$table_record_count_downloaded == $table_record_count_expected now merge split files into $file_name.gz" | tee -a $download_path/_log.txt
+    echo "## DONE downloading table cnt#=$table_record_count_downloaded == $table_record_count_expected now merge split files into $file_name.gz" | tee -a $download_path/_log.txt
     cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
     rm $file_name.split.*
     echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
     if [[ $table_record_count_downloaded -ne $table_record_count_expected ]]; then
-        echo "   Error $file_name wrong table_record_count_downloaded=$table_record_count_downloaded table_record_count_expected=$table_record_count_expected" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
+        echo "##    Error $file_name wrong table_record_count_downloaded=$table_record_count_downloaded table_record_count_expected=$table_record_count_expected" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
         # exit 1 . #For big tables split per day we dont have accurate count.
     fi
 else
 
-    echo "## file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
+    echo "##    file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
     table_record_count_downloaded="$(zcat ${file_name}.gz | jq '. | length' )"
 fi
 
@@ -192,16 +192,16 @@ fi
 ##
 f="$file_name.gz"
 if [[ $table_record_count_downloaded -eq 0 ]]; then
-    echo "## Skip upload record_count=$table_record_count_downloaded ${f}" | tee -a $download_path/_log.txt
+    echo "##    Skip upload record_count=$table_record_count_downloaded ${f}" | tee -a $download_path/_log.txt
 else
 
-    echo "## Start upload to $container_name f=${f} cnt#=$table_record_count_downloaded == $table_record_count_expected" | tee -a $download_path/_log.txt
+    echo "##    Start upload to $container_name f=${f} cnt#=$table_record_count_downloaded == $table_record_count_expected" | tee -a $download_path/_log.txt
     if [[ "$container_sas_token" == "" ]]; then
         auth="--auth-mode login"
-        echo "# No container_sas_token set in config-${env}.sh using $auth"
+        echo "##    No container_sas_token set in config-${env}.sh using $auth"
     else
         auth="--sas-token $container_sas_token"
-        echo "# Using container_sas_token to auth to blob container $container_name"
+        echo "##    Using container_sas_token to auth to blob container $container_name"
     fi
     az storage blob upload \
             ${auth} \
@@ -214,11 +214,11 @@ else
             --metadata "records_count=$table_record_count_downloaded"
     rc=$?
     if [[ $rc -ne 0 ]]; then
-        echo "## Error with blob upload - exit"
+        echo "##    ERROR with blob upload - exit"
         exit 1
     fi
     t="$(ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes")"
-    echo "## ${f##*/} uploaded to blob container. empty file ${t}" | tee -a $download_path/_log.txt
+    echo "##    ${f##*/} uploaded to blob container. empty file ${t}" | tee -a $download_path/_log.txt
 fi
 rm ${f}
 touch $file_name.uploadDone
