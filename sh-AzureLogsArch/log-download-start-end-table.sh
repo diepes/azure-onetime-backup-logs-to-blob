@@ -165,7 +165,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             fi
         fi  # $rc != 0
         if [[ $table_record_count -eq 0 ]]; then
-            echo "#    no records for $table_name cnt=$table_record_count remove split file $file_name_split t_step=$tstep"
+            echo "#    no records for $table_name cnt=$table_record_count remove split file $file_name_split t_step=$t_step"
             rm $file_name_split
         fi
         table_record_count_downloaded=$(( $table_record_count_downloaded + $table_record_count ))
