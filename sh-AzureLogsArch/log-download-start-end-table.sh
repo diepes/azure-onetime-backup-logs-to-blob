@@ -51,7 +51,7 @@ function update_t_step () {
         t_step_pct=${1:-10}
         t_step_temp=$t_step
         t_step=$( echo "$t_step * (100+${t_step_pct})/100/1 +1" | bc)
-        echo "INFO: adjust t_step ${t_step_pct}%  $t_step_temp > $t_step"
+        echo "#        func:update_t_step t_step ${t_step_pct}%  $t_step_temp > $t_step"
 }
 if [[ ! -f "$file_name.gz" ]]; then
     echo "#   Downloading data for table: \"$table_name\"" | tee -a $download_path/_log.txt
@@ -78,6 +78,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         # 10th of seconds
         t_o=$( echo "scale=2;$t_old/100"|bc)
         t_s=$( echo "scale=2;$t_start/100"|bc)
+        t_diff=$( echo "scale=2;$t_s - $t_o"|bc)
         t_old_str="$(date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_start_str="$(date -d @$t_s +"%Y-%m-%dT%H:%M:%S.%NZ")"
         t_str="todatetime('$t_old_str') .. todatetime('$t_start_str')"
@@ -87,8 +88,10 @@ if [[ ! -f "$file_name.gz" ]]; then
         fi
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         file_name_split="${file_name}.split.$( printf "%03i" ${split_cnt} )"
-        echo "$file_name_split --analytics-query \"$query\"  t_diff_old=$(( $t_start - $t_old ))" | tee -a $download_path/_log.txt
-        echo "#    Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ" = $t_old_str"
+        echo
+        echo "START: $file_name_split"
+        echo "#    query=\"$query\"  t_diff=$t_diff" | tee -a $download_path/_log.txt
+        #echo "#    Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ" = $t_old_str"
         ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
         set +e
         table_record_count=$( \
