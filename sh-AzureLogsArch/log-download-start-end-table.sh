@@ -203,7 +203,8 @@ if [[ ! -f "$file_name.gz" ]]; then
 else
 
     echo "##    file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
-    table_record_count_downloaded="$(zcat ${file_name}.gz | jq '. | length' )"
+    #table_record_count_downloaded="$(zcat ${file_name}.gz | jq '. | length' )"
+    table_record_count_downloaded="$(zcat ${file_name}.gz | python3 ${0%/*}/json-count.py )"
 fi
 
 ##
