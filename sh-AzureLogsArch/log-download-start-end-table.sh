@@ -75,7 +75,7 @@ if [[ ! -f "$file_name.gz" ]]; then
     table_record_count=0  # num of records retrieved from query
     block_step_inc_cnt=0  # when reducing step block inc for this many rounds.
     # Working from old to new
-    touch "${file_name}.split.000"
+    touch "${file_name}.split.0000"
     while [[ $t_start -gt $(( $t_beginning * 100 )) ]]; do
         split_cnt=$(($split_cnt+1))
         table_record_count_previous=$table_record_count
@@ -91,7 +91,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             block_step_inc_cnt=$(( $block_step_inc_cnt -1 ))
         fi
         query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
-        file_name_split="${file_name}.split.$( printf "%03i" ${split_cnt} )"
+        file_name_split="${file_name}.split.$( printf "%04i" ${split_cnt} )"
         echo
         echo "START: $file_name_split    t_diff=$t_diff" | tee -a $download_path/_log.txt
         echo "#    query=\"$query\"" | tee -a $download_path/_log.txt
@@ -153,6 +153,7 @@ if [[ ! -f "$file_name.gz" ]]; then
                 fi
             # check if we shold increase t_step size
             elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 100)) ]] && [[ $file_size -lt 11000000 ]]; then
+
                 if [[ $table_record_count -gt $table_record_count_previous ]] ; then
                     echo "#    Skip speedup inc rec cnt > previous rec count, increasing. block_step_inc_cnt=$block_step_inc_cnt"
                     if [[ $( echo "( $table_record_count - $table_record_count_previous ) /1000/1" | bc) -gt 5 ]]; then
@@ -181,7 +182,18 @@ if [[ ! -f "$file_name.gz" ]]; then
     done # reached t_beginning
 
     echo "## DONE downloading table cnt#=$table_record_count_downloaded == $table_record_count_expected now merge split files into $file_name.gz" | tee -a $download_path/_log.txt
-    cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
+
+    # jq fils all memory > 100G for large json files
+    #cat $file_name.split.* | jq -s 'add' | gzip > $file_name.gz
+    # https://www.shortcutfoo.com/app/dojos/awk/cheatsheet
+    cat $file_name.split.* \
+        | awk  'BEGIN{print "["}
+                    /^\[/ && NR > 1 {print ","}
+                    !/^[\[\]]\s*$/ {print}
+                END{print "]"}
+                ' \
+        | gzip > $file_name.gz
+    #
     rm $file_name.split.*
     echo "## Downloaded table: '$table_name' $table_record_count_downloaded records" | tee -a $download_path/_log.txt
     if [[ $table_record_count_downloaded -ne $table_record_count_expected ]]; then
