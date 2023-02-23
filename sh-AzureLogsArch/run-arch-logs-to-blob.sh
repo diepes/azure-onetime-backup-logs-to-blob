@@ -6,13 +6,18 @@ if [[ -f config-${env}.sh ]] ; then
 else
     source ../config-${env}.sh
 fi
+if [[ "$time_start" == "" ]];
+    echo "Missing config time_start e.g. \"2023-02-19T23:59\""
+    exit 1
+fi
+
 ##
 # Functions
 ##
-time_start=$(date +%s)
+elapsed_time_start=$(date +%s)
 function ElapsedMinutes() {
     # Prints lapsed time in minutes, uses $1 can append $2
-    t=$( awk -v t="${1:-$(( $(date +%s) - ${time_start} ))}" -v m="${2:-}" 'BEGIN {printf("%.2f%s", t / 60.0, m )}' )
+    t=$( awk -v t="${1:-$(( $(date +%s) - ${elapsed_time_start} ))}" -v m="${2:-}" 'BEGIN {printf("%.2f%s", t / 60.0, m )}' )
     echo "$t"
 }
 ##
@@ -78,9 +83,9 @@ echo "## Found $table_l tables" | tee -a $download_path/_log.txt
 table_c=0
 err_redo=0  #Count # of failed queries
 echo "$table_names" | while read table_name ; do
-    file_name="${download_path}/${table_name}_$( date +"%Y-%m-19" )_${days_back}d.json"
+    file_name="${download_path}/${table_name}_$( date -d "$time_start" +"%Y-%m-%d" )_${days_back}d.json"
     table_c=$((table_c+1))
-    ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes" | tee -a $download_path/_log.txt
+    echo "$( ElapsedMinutes ) minutes" | tee -a $download_path/_log.txt
     echo "# START for table: $table_c/$table_l \"$table_name\"" | tee -a $download_path/_log.txt
     # Get the data for the table
     # Skip broken or useless(big) tables - Perf, AzureDiagnostics
@@ -90,7 +95,7 @@ echo "$table_names" | while read table_name ; do
         continue
     fi
     if [[ -f "$file_name.uploadDone" ]]; then
-        echo "## Skip table $table_name, file exists $file_name.uploadDone ..." | tee -a $download_path/_log.txt
+        echo "##     Skip table $table_name, file exists $file_name.uploadDone ..." | tee -a $download_path/_log.txt
         continue
     fi
 
@@ -144,5 +149,5 @@ echo "$table_names" | while read table_name ; do
     fi
 done
 
-t="$(ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes")"
+t="$( ElapsedMinutes ) minutes"
 echo "## Done. TheEnd. ${t}" | tee -a $download_path/_log.txt
