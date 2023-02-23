@@ -61,7 +61,7 @@ workspace_id=$( az monitor log-analytics workspace show \
 echo "## Got workspace_id=$workspace_id" | tee -a $download_path/_log.txt
 
 # Get a list of tables in the workspace
-echo "## Start retrieve table names." | tee -a $download_path/_log.txt
+echo "## Retrieve table names." | tee -a $download_path/_log.txt
 table_names=$( \
     az monitor log-analytics workspace table list \
         --resource-group $storage_rg \
@@ -140,7 +140,7 @@ echo "$table_names" | while read table_name ; do
         do
             t_beginning=$(( t_start - (($day_back) * 86400) ))
             t_start_input=$(( t_start - (($day_back-1) * 86400) ))
-            echo "    $table_name day=$day_back/$days_back t_beginning=$t_beginning t_start=$t_start"
+            echo "    Loop $table_name day=$day_back/$days_back t_beginning=$t_beginning t_start=$t_start"
             # ToDo get accurate record count estimate.
             ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name.d${day_back}" "$workspace_id" "$(( $table_record_count / $days_back))"
         done

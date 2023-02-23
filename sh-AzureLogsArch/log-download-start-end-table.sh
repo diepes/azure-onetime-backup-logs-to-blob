@@ -1,5 +1,4 @@
 #!/usr/bin/bash
-echo "Start $0"
 # debug
 set -e
 set -o pipefail
@@ -15,7 +14,8 @@ workspace_id="$6"
 table_record_count_expected="$7"
 table_record_count_downloaded=0
 
-echo "## env=${env}"
+
+echo "enter $0 env=${env} table=$table_name file_name=file_name"
 if [[ -f config-${env}.sh ]] ; then
     source config-${env}.sh
 else
@@ -24,10 +24,10 @@ fi
 ##
 # Functions
 ##
-time_start=$(date +%s)
+elapsed_time_start=$(date +%s)
 function ElapsedMinutes() {
     # Prints lapsed time in minutes, uses $1 can append $2
-    t=$( awk -v t="${1:-$(( $(date +%s) - ${time_start} ))}" -v m="${2:-}" 'BEGIN {printf("%.2f%s", t / 60.0, m )}' )
+    t=$( awk -v t="${1:-$(( $(date +%s) - ${elapsed_time_start} ))}" -v m="${2:-}" 'BEGIN {printf("%.2f%s", t / 60.0, m )}' )
     echo "$t"
 }
 ##
@@ -237,7 +237,7 @@ else
         echo "##    ERROR with blob upload - exit"
         exit 1
     fi
-    t="$(ElapsedMinutes $(( $(date +%s) - ${time_start} )) " minutes")"
+    t="$(ElapsedMinutes ) minutes"
     echo "##    ${f##*/} uploaded to blob container. empty file ${t}" | tee -a $download_path/_log.txt
 fi
 rm ${f}
