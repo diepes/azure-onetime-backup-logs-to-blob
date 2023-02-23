@@ -6,7 +6,7 @@ if [[ -f config-${env}.sh ]] ; then
 else
     source ../config-${env}.sh
 fi
-if [[ "$time_start" == "" ]];
+if [[ "$time_start" == "" ]]; then
     echo "Missing config time_start e.g. \"2023-02-19T23:59\""
     exit 1
 fi
