@@ -90,7 +90,9 @@ if [[ ! -f "$file_name.gz" ]]; then
         if [[ $block_step_inc_cnt -gt 0 ]]; then
             block_step_inc_cnt=$(( $block_step_inc_cnt -1 ))
         fi
-        query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
+        #query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
+        # between includes start and end, rather use > and <=
+        query="$table_name |where TimeGenerated > todate($t_old_str) and TimeGenerated <= todate($t_start_str) |sort by TimeGenerated asc"
         file_name_split="${file_name}.split.$( printf "%04i" ${split_cnt} )"
         echo
         echo "START: $file_name_split    t_diff=$t_diff" | tee -a $download_path/_log.txt
