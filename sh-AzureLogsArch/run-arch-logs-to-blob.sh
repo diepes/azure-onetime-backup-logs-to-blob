@@ -94,13 +94,22 @@ echo "$table_names" | while read table_name ; do
         continue
     fi
 
+    t_start=$(date -d "$time_start" +"%s")  # from config-<env>.sh
+    t_beginning=$(( t_start - ($days_back * 86400) ))
+    t_start_input=$t_start
+
+    t_old_str="$(date -d @$t_beginning +"%Y-%m-%dT%H:%M:%S.%NZ")"
+    t_start_str="$(date -d @$t_start +"%Y-%m-%dT%H:%M:%S.%NZ")"
+    t_str="todatetime('$t_old_str') .. todatetime('$t_start_str')"
+    query="$table_name |where TimeGenerated between ($t_str) |summarize Count=count()"
     table_record_count=$( \
         az monitor log-analytics query \
             --workspace "$workspace_id" \
-            --analytics-query "${table_name}  |where TimeGenerated >= ago(${days_back}d) |summarize Count=count()" \
+            --analytics-query "$query" \
             --output json  2>> $download_path/_error_query.txt \
         | jq -r ".[0].Count"
         )
+        #    --analytics-query "${table_name}  |where TimeGenerated >= ago(${days_back}d) |summarize Count=count()" \
     rc=$?
     if [[ $rc -ne 0 ]]; then
         echo "# ERROR exit getting table_record_count for \"${table_name}\" " |tee -a $download_path/_log.txt |tee -a $download_path/_error_query.txt
@@ -118,18 +127,15 @@ echo "$table_names" | while read table_name ; do
     fi
 
     echo "#    table \"$table_name\" record_count=$table_record_count split_per_day=$split_per_day"
-    t_now=$(date -d "$(date +%Y-%m-%d) 00:00:00" +%s)  # Start of today
-    t_beginning=$(( t_now - ($days_back * 86400) ))
-    t_start_input=$t_now
     if [[ "$split_per_day" == "false" ]]; then
             ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name" "$workspace_id" "$table_record_count"
     else
         echo "Split $table_name into days"
         for day_back in $(seq -w $days_back -1 1);
         do
-            t_beginning=$(( t_now - (($day_back) * 86400) ))
-            t_start_input=$(( t_now - (($day_back-1) * 86400) ))
-            echo "    $table_name day=$day_back/$days_back t_beginning=$t_beginning t_now=$t_now"
+            t_beginning=$(( t_start - (($day_back) * 86400) ))
+            t_start_input=$(( t_start - (($day_back-1) * 86400) ))
+            echo "    $table_name day=$day_back/$days_back t_beginning=$t_beginning t_start=$t_start"
             # ToDo get accurate record count estimate.
             ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name.d${day_back}" "$workspace_id" "$(( $table_record_count / $days_back))"
         done
