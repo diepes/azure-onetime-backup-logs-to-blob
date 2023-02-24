@@ -92,7 +92,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         fi
         #query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         # between includes start and end, rather use > and <=
-        query="$table_name |where TimeGenerated > todate($t_old_str) and TimeGenerated <= todate($t_start_str) |sort by TimeGenerated asc"
+        query="$table_name |where TimeGenerated > todatetime('$t_old_str') and TimeGenerated <= todatetime('$t_start_str') |sort by TimeGenerated asc"
         file_name_split="${file_name}.split.$( printf "%04i" ${split_cnt} )"
         echo
         echo "START: $file_name_split    t_diff=$t_diff" | tee -a $download_path/_log.txt
@@ -112,7 +112,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         if [[ $rc -ne 0 ]]; then
             err_redo=$(( $err_redo + 1 ))
             echo "#    ERROR rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
-            echo "#          az monitor log-analytics query --workspace "$workspace_id" --analytics-query "$query" --output json" >> $download_path/_error_query.txt
+            echo "#          az monitor log-analytics query --workspace \"$workspace_id\" --analytics-query \"$query\" --output json" >> $download_path/_error_query.txt
             t_old=$t_start  #Reset to start
             table_record_count=0  # Set to 0 discard file.
             touch "${file_name_split}.REDO-DEL.${err_redo}.err"
