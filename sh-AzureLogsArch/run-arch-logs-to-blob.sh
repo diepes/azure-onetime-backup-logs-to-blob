@@ -89,7 +89,7 @@ echo "$table_names" | while read table_name ; do
     echo "# START for table: $table_c/$table_l \"$table_name\"" | tee -a $download_path/_log.txt
     # Get the data for the table
     # Skip broken or useless(big) tables - Perf, AzureDiagnostics
-    if [[ "OmsCustomerProfileFact ReservedCommonFields Perf AzureDiagnostics" == *"${table_name}"* ]]; then
+    if [[ "OmsCustomerProfileFact ReservedCommonFields Perf AzureDiagnostics f_audit_CL" == *"${table_name}"* ]]; then
         echo "#   Skip faulty table $table_name ..." | tee -a $download_path/_log.txt
         touch $file_name.SKIP_DOWNLOAD.json
         continue
