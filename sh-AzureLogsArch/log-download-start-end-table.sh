@@ -95,7 +95,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             err_msg="Recover err_redo=$err_redo $(( ($err_t_old - $t_start)/100 ))sec"
         else
             err_t_old=0
-            err_msg=""
+            err_msg="err_redo=$err_redo"
         fi
         #query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         # between includes start and end, rather use > and <=
