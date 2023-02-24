@@ -233,15 +233,19 @@ else
         auth="--sas-token $container_sas_token"
         echo "##    Using container_sas_token to auth to blob container $container_name"
     fi
-    az storage blob upload \
-            ${auth} \
-            --account-name "$storage_account_name" \
-            --container-name "$container_name" \
-            --file "${f}" \
-            --name "${f##*/}" \
-            --type block \
-            --type block --tier "hot" \
-            --metadata "records_count=$table_record_count_downloaded"
+    # az storage blob upload \
+    #         ${auth} \
+    #         --account-name "$storage_account_name" \
+    #         --container-name "$container_name" \
+    #         --file "${f}" \
+    #         --name "${f##*/}" \
+    #         --type block \
+    #         --type block --tier "hot" \
+    #         --metadata "records_count=$table_record_count_downloaded"
+    # #
+    azure_sas_url="https://${storage_account_name}.blob.core.windows.net/${container_name}"
+    azureBlobUrl="${azure_sas_url}/${f##*/}?${container_sas_token}"
+    azcopy copy "${f}" "$azureBlobUrl" --blob-type=BlockBlob --check-length=false --block-blob-tier=hot --metadata "records_count=$table_record_count_downloaded"
     rc=$?
     if [[ $rc -ne 0 ]]; then
         echo "##    ERROR with blob upload - exit"
