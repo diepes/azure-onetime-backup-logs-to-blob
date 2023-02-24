@@ -33,6 +33,7 @@ function ElapsedMinutes() {
 ##
 
 err_redo=0  #Count # of failed queries
+err_t_old=0 #t_old of last err
 
 if [[ -f "$file_name.uploadDone" ]]; then
     # We could get here for large tables, split per day.
@@ -90,12 +91,18 @@ if [[ ! -f "$file_name.gz" ]]; then
         if [[ $block_step_inc_cnt -gt 0 ]]; then
             block_step_inc_cnt=$(( $block_step_inc_cnt -1 ))
         fi
+        if [[ $err_t_old -gt $t_start ]]; then
+            err_msg="Recover err_redo=$err_redo $(( ($err_t_old - $t_start)/100 ))sec"
+        else
+            err_t_old=0
+            err_msg=""
+        fi
         #query="$table_name |where TimeGenerated between ($t_str) |sort by TimeGenerated asc"
         # between includes start and end, rather use > and <=
         query="$table_name |where TimeGenerated > todatetime('$t_old_str') and TimeGenerated <= todatetime('$t_start_str') |sort by TimeGenerated asc"
         file_name_split="${file_name}.split.$( printf "%04i" ${split_cnt} )"
         echo
-        echo "START: $file_name_split    t_diff=${t_diff}sec" | tee -a $download_path/_log.txt
+        echo "START: $file_name_split    t_diff=${t_diff}sec  $err_msg" | tee -a $download_path/_log.txt
         echo "#    query=\"$query\"" | tee -a $download_path/_log.txt
         #echo "#    Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ" = $t_old_str"
         ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
@@ -111,6 +118,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         set -e
         if [[ $rc -ne 0 ]]; then
             err_redo=$(( $err_redo + 1 ))
+            err_t_old=$t_old  #Where we would have been.
             echo "#    ERROR rc=$rc az monitor query - see $download_path/_error_query.txt - err_redo=$err_redo" | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             echo "#          az monitor log-analytics query --workspace \"$workspace_id\" --analytics-query \"$query\" --output json" >> $download_path/_error_query.txt
             t_old=$t_start  #Reset to start
@@ -118,7 +126,8 @@ if [[ ! -f "$file_name.gz" ]]; then
             touch "${file_name_split}.REDO-DEL.${err_redo}.err"
             ##t_step=$( echo "$t_step * 0.01/1 +1" | bc)  #Reduce to 1% e.g. 5000s to 100sec
             update_t_step -99 #Reduce to 1% e.g. 5000s to 100sec
-            block_step_inc_cnt=$(( $block_step_inc_cnt + 10)) #Block increase for next 10 steps
+            block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 2 steps
+
             echo "#        Reset t_old to t_start=$t_start ,touch empty ${file_name_split}.REDO-DEL.${err_redo} reduce t_step=$t_step RETRY ..." | tee -a $download_path/_log.txt | tee -a $download_path/_error_query.txt
             #exit 1
             #continue
@@ -129,6 +138,9 @@ if [[ ! -f "$file_name.gz" ]]; then
             file_size_mb=$( echo "$file_size /1000/1000/1" | bc)
             rec_left=$(( $table_record_count_expected - $table_record_count_downloaded ))
             echo "#    rc=$rc \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) t_step=${t_step}($( echo "scale=1;$t_step /100/60/60/1" | bc)h) rec($rec_left)" | tee -a $download_path/_log.txt
+            ##
+            # Speedup / Slowdown t_step
+            ##
             if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 19000000 ]]; then
                 if [[ $file_size -gt $(( 90 * 1000 * 1000)) ]]; then
                     t_step_pct=$( echo "-(1 - (10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
@@ -146,13 +158,12 @@ if [[ ! -f "$file_name.gz" ]]; then
                     #continue
                 elif [[ $file_size -gt $(( 55 * 1000 * 1000)) ]]; then
                     echo "#    WARNING file_size of last split $file_size reduce t_step=${t_step}s by 25%"
-                    #t_step=$( echo "$t_step * 0.75/1 +1" | bc)
                     update_t_step -25 #Reduce 25%
-                    block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
+                    block_step_inc_cnt=$(( $block_step_inc_cnt + 4)) #Block increase for next 10 steps
                 else
                     echo "#    slowdown table_record_count=$table_record_count > 45k and file_size=$file_size < 19MB, reduce t_step=${t_step}s by 10%"
-                    #t_step=$( echo "$t_step * 0.9/1 +1" | bc)
                     update_t_step -10 #Reduce 10%
+                    block_step_inc_cnt=$(( $block_step_inc_cnt + 3)) #Block increase for next 10 steps
                 fi
             # check if we should increase t_step size
             elif [[ $table_record_count -gt $table_record_count_previous ]] ; then
