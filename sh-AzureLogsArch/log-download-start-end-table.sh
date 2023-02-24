@@ -95,7 +95,7 @@ if [[ ! -f "$file_name.gz" ]]; then
         query="$table_name |where TimeGenerated > todatetime('$t_old_str') and TimeGenerated <= todatetime('$t_start_str') |sort by TimeGenerated asc"
         file_name_split="${file_name}.split.$( printf "%04i" ${split_cnt} )"
         echo
-        echo "START: $file_name_split    t_diff=$t_diff" | tee -a $download_path/_log.txt
+        echo "START: $file_name_split    t_diff=${t_diff}sec" | tee -a $download_path/_log.txt
         echo "#    query=\"$query\"" | tee -a $download_path/_log.txt
         #echo "#    Time Debug old $t_old > $t_o and $t_start > $t_s  date -d @$t_o +"%Y-%m-%dT%H:%M:%S.%NZ" = $t_old_str"
         ## echo "running ... az monitor log-analytics query --analytics-query \"$query\"" >> $download_path/_error_query.txt
@@ -129,7 +129,7 @@ if [[ ! -f "$file_name.gz" ]]; then
             file_size_mb=$( echo "$file_size /1000/1000/1" | bc)
             rec_left=$(( $table_record_count_expected - $table_record_count_downloaded ))
             echo "#    rc=$rc \"$table_name\" rec#=$table_record_count(${file_size_mb}MB) split=$split_cnt(+${est_cnt_left}) t_step=${t_step}($( echo "scale=1;$t_step /100/60/60/1" | bc)h) rec($rec_left)" | tee -a $download_path/_log.txt
-            if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 45000000 ]]; then
+            if [[ $table_record_count -gt 40000 ]] || [[ $file_size -gt 19000000 ]]; then
                 if [[ $file_size -gt $(( 90 * 1000 * 1000)) ]]; then
                     t_step_pct=$( echo "-(1 - (10 * 1000 * 1000)/$file_size) *100 /1 +1" | bc)
                     echo "#    ERROR REDO as file_size=$file_size and t_step_pct=$t_step_pct table_record_count=$table_record_count > 40000 might be losing logs, reduce step time ! $file_name_split" | tee -a $download_path/_log.txt
@@ -150,26 +150,22 @@ if [[ ! -f "$file_name.gz" ]]; then
                     update_t_step -25 #Reduce 25%
                     block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
                 else
-                    echo "#    slowdown table_record_count=$table_record_count > 45k but file_size=$file_size < 50MB, reduce t_step=${t_step}s by 10%"
+                    echo "#    slowdown table_record_count=$table_record_count > 45k and file_size=$file_size < 19MB, reduce t_step=${t_step}s by 10%"
                     #t_step=$( echo "$t_step * 0.9/1 +1" | bc)
                     update_t_step -10 #Reduce 10%
                 fi
-            # check if we shold increase t_step size
-            elif [[ $table_record_count -lt 30000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 100)) ]] && [[ $file_size -lt 11000000 ]]; then
-
-                if [[ $table_record_count -gt $table_record_count_previous ]] ; then
-                    echo "#    Skip speedup inc rec cnt > previous rec count, increasing. block_step_inc_cnt=$block_step_inc_cnt"
+            # check if we should increase t_step size
+            elif [[ $table_record_count -gt $table_record_count_previous ]] ; then
+                    echo "#    table_count growing > previous rec count"
                     if [[ $( echo "( $table_record_count - $table_record_count_previous ) /1000/1" | bc) -gt 5 ]]; then
-                        echo "#        slowdown records increase so fast >5k lets slow down 5%"
+                        echo "#        slowdown records increase to fast >5k lets slow down 5%"
                         #t_step=$( echo "$t_step * 0.95/1 +1" | bc)
                         update_t_step -5 #Reduce 5%
                         block_step_inc_cnt=$(( $block_step_inc_cnt + 2)) #Block increase for next 10 steps
                     fi
-                else
-                    t_step_old=$t_step
-                    echo "#    speedup 10% t_step_old $t_step_old to $t_step as cnt=$table_record_count < 30k && step<1d file_size=$(( $file_size / 1000 / 1000 )) < 11MB"
+            elif [[ $table_record_count -lt 35000 ]] && [[ $t_step -lt $(( 60 * 60 * 24 * 100)) ]] && [[ $file_size -lt 9000000 ]]; then
+                    echo "#    speedup 10% t_step_old $t_step as cnt=$table_record_count < 30k && step<1d file_size=$(( $file_size / 1000 / 1000 )) < 11MB"
                     update_t_step 10 #Increase 10%
-                fi
             fi
         fi  # $rc != 0
         if [[ $table_record_count -eq 0 ]]; then
