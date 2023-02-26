@@ -150,4 +150,4 @@ echo "$table_names" | while read table_name ; do
 done
 
 t="$( ElapsedMinutes ) minutes"
-echo "## Done. TheEnd. ${t}" | tee -a $download_path/_log.txt
+echo "## Done with all Tables. TheEnd. ${t}" | tee -a $download_path/_log.txt
