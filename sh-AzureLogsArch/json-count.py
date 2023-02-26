@@ -2,7 +2,7 @@
 import sys
 #import ijson
 
-cnt = 0
+cnt_open = 0
 
 for line in sys.stdin:
     if line.startswith("  {"):
