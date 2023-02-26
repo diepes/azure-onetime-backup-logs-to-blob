@@ -136,13 +136,13 @@ echo "$table_names" | while read table_name ; do
             ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name" "$workspace_id" "$table_record_count"
     else
         echo "Split $table_name into days"
-        for day_back in $(seq -w $days_back -1 1);
+        for day_back in $(seq $days_back -1 1);
         do
             t_beginning=$(( t_start - (($day_back) * 86400) ))
             t_start_input=$(( t_start - (($day_back-1) * 86400) ))
             echo "    Loop $table_name day=$day_back/$days_back t_beginning=$t_beginning t_start=$t_start"
             # ToDo get accurate record count estimate.
-            ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name.d${day_back}" "$workspace_id" "$(( $table_record_count / $days_back))"
+            ${0%/*}/log-download-start-end-table.sh $env "$table_name" $t_beginning $t_start_input "$file_name.d$(printf "%02d" ${day_back})" "$workspace_id" "$(( $table_record_count / $days_back))"
         done
         #Leave marker if all days done.
         touch $file_name.uploadDone
