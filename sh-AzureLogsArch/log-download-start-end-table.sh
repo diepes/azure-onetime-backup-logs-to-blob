@@ -214,6 +214,7 @@ else
 
     echo "##    file already exists $file_name proceed to upload blob ..." | tee -a $download_path/_log.txt
     #table_record_count_downloaded="$(zcat ${file_name}.gz | jq '. | length' )"
+    echo "##        zcat to count table_record_count_download ..."
     table_record_count_downloaded="$(zcat ${file_name}.gz | python3 ${0%/*}/json-count.py )"
 fi
 

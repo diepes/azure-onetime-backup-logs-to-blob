@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import sys
-import ijson
+#import ijson
 
 cnt = 0
 
-for record in ijson.items(sys.stdin, "item"):
-        cnt = cnt + 1
+for line in sys.stdin:
+    if line.startswith("  {"):
+        cnt_open = cnt_open + 1
 
-print(cnt)
+print(cnt_open)
